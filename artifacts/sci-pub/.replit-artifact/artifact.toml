@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "SciPub — Scientific Publication Platform"
+version = "1.0.0"
+id = "artifacts/sci-pub"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24243
+
+[services.development]
+run = "pnpm --filter @workspace/sci-pub run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sci-pub", "run", "build" ]
+publicDir = "artifacts/sci-pub/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24243"
+BASE_PATH = "/"

@@ -3,20 +3,29 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Scientific Publication Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: papers
+    description: Paper submission and management
+  - name: reviews
+    description: Human review operations
+  - name: admin
+    description: Admin operations
+  - name: users
+    description: User profile operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +33,499 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Auth ────────────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: registerUser
+      tags: [auth]
+      summary: Register a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logoutUser
+      tags: [auth]
+      summary: Logout current user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── Papers (public) ─────────────────────────────────────────────────────────
+  /papers:
+    get:
+      operationId: listPublishedPapers
+      tags: [papers]
+      summary: List all published papers (public)
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 12
+      responses:
+        "200":
+          description: Paginated published papers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaperListResponse"
+
+  /papers/{id}:
+    get:
+      operationId: getPaper
+      tags: [papers]
+      summary: Get a paper by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paper details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaperDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── Paper stats (wow endpoint) ───────────────────────────────────────────────
+  /papers/stats:
+    get:
+      operationId: getPaperStats
+      tags: [papers]
+      summary: Platform statistics (counts by status, category breakdown, etc.)
+      responses:
+        "200":
+          description: Platform stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformStats"
+
+  # ─── My submissions ───────────────────────────────────────────────────────────
+  /my/papers:
+    get:
+      operationId: listMyPapers
+      tags: [papers]
+      summary: List current author's submissions
+      responses:
+        "200":
+          description: Author's papers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaperSummary"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createPaper
+      tags: [papers]
+      summary: Create a new paper draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaperInput"
+      responses:
+        "201":
+          description: Draft created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaperDetail"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /my/papers/{id}:
+    get:
+      operationId: getMyPaper
+      tags: [papers]
+      summary: Get author's own paper with full detail (history, AI report)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Full paper detail including history and AI report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaperDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updatePaper
+      tags: [papers]
+      summary: Update a draft or revision paper
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaperUpdate"
+      responses:
+        "200":
+          description: Updated paper
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaperDetail"
+
+  /my/papers/{id}/submit:
+    post:
+      operationId: submitPaper
+      tags: [papers]
+      summary: Submit a draft or revised paper for review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paper submitted — AI review triggered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaperDetail"
+        "400":
+          description: Cannot submit paper in current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── Verifier queue ───────────────────────────────────────────────────────────
+  /verifier/queue:
+    get:
+      operationId: getVerifierQueue
+      tags: [reviews]
+      summary: Get papers in verifier's review queue
+      responses:
+        "200":
+          description: Papers assigned to this verifier
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaperSummary"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /verifier/papers/{id}/review:
+    post:
+      operationId: submitReview
+      tags: [reviews]
+      summary: Submit a review decision on a paper
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewInput"
+      responses:
+        "201":
+          description: Review submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── Admin ────────────────────────────────────────────────────────────────────
+  /admin/papers:
+    get:
+      operationId: adminListPapers
+      tags: [admin]
+      summary: List all papers with full status info
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: All papers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaperListResponse"
+
+  /admin/papers/{id}/assign:
+    post:
+      operationId: assignVerifier
+      tags: [admin]
+      summary: Assign a verifier to a paper
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignInput"
+      responses:
+        "200":
+          description: Verifier assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaperDetail"
+
+  /admin/papers/{id}/status:
+    patch:
+      operationId: adminUpdatePaperStatus
+      tags: [admin]
+      summary: Override paper status (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusOverride"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaperDetail"
+
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: List all users
+      responses:
+        "200":
+          description: All users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /admin/users/{id}/role:
+    patch:
+      operationId: adminUpdateUserRole
+      tags: [admin]
+      summary: Update a user's role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleUpdate"
+      responses:
+        "200":
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /admin/analytics:
+    get:
+      operationId: getAnalytics
+      tags: [admin]
+      summary: Admin analytics dashboard data
+      responses:
+        "200":
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsData"
+
+  # ─── Users ────────────────────────────────────────────────────────────────────
+  /users/{id}:
+    get:
+      operationId: getUserProfile
+      tags: [users]
+      summary: Get public user profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +536,406 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    # ─── Auth ──────────────────────────────────────────────────────────────────
+    RegisterInput:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        name:
+          type: string
+        affiliation:
+          type: ["string", "null"]
+        orcidId:
+          type: ["string", "null"]
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    # ─── User ──────────────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, email, name, role, createdAt]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [USER, VERIFIER, ADMIN]
+        verifierLayer:
+          type: ["integer", "null"]
+        affiliation:
+          type: ["string", "null"]
+        orcidId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    RoleUpdate:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [USER, VERIFIER, ADMIN]
+        verifierLayer:
+          type: ["integer", "null"]
+
+    # ─── Paper ─────────────────────────────────────────────────────────────────
+    PaperInput:
+      type: object
+      required: [title, abstract, keywords, category, pdfUrl, content]
+      properties:
+        title:
+          type: string
+        abstract:
+          type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        category:
+          type: string
+        pdfUrl:
+          type: string
+        content:
+          type: string
+        coAuthors:
+          type: array
+          items:
+            type: string
+
+    PaperUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        abstract:
+          type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        category:
+          type: string
+        pdfUrl:
+          type: string
+        content:
+          type: string
+        coAuthors:
+          type: array
+          items:
+            type: string
+
+    PaperSummary:
+      type: object
+      required: [id, title, status, category, authorId, authorName, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        abstract:
+          type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        category:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, SUBMITTED, AI_REVIEW, AI_PASSED, AI_FAILED, LAYER_2_REVIEW, LAYER_2_APPROVED, LAYER_3_REVIEW, LAYER_3_APPROVED, PUBLISHED, REVISION_REQUESTED, REJECTED]
+        currentLayer:
+          type: integer
+        doi:
+          type: ["string", "null"]
+        authorId:
+          type: integer
+        authorName:
+          type: string
+        pdfUrl:
+          type: string
+        publishedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PaperDetail:
+      allOf:
+        - $ref: "#/components/schemas/PaperSummary"
+        - type: object
+          properties:
+            aiReport:
+              $ref: "#/components/schemas/AiReport"
+            reviews:
+              type: array
+              items:
+                $ref: "#/components/schemas/Review"
+            statusHistory:
+              type: array
+              items:
+                $ref: "#/components/schemas/StatusHistoryEntry"
+            assignedVerifierId:
+              type: ["integer", "null"]
+            assignedVerifierName:
+              type: ["string", "null"]
+            coAuthors:
+              type: array
+              items:
+                type: string
+
+    PaperListResponse:
+      type: object
+      required: [papers, total, page, limit]
+      properties:
+        papers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaperSummary"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # ─── AI Report ─────────────────────────────────────────────────────────────
+    AiReport:
+      type: object
+      required: [score, passed]
+      properties:
+        score:
+          type: number
+        passed:
+          type: boolean
+        wordCount:
+          type: integer
+        aiGeneratedLikelihood:
+          type: number
+        plagiarismScore:
+          type: number
+        structureComplete:
+          type: boolean
+        citationValid:
+          type: boolean
+        grammarScore:
+          type: number
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiIssue"
+
+    AiIssue:
+      type: object
+      required: [type, severity, message]
+      properties:
+        type:
+          type: string
+        severity:
+          type: string
+          enum: [critical, warning, info]
+        message:
+          type: string
+        location:
+          type: ["string", "null"]
+
+    # ─── Review ────────────────────────────────────────────────────────────────
+    ReviewInput:
+      type: object
+      required: [decision, comments]
+      properties:
+        decision:
+          type: string
+          enum: [APPROVED, REJECTED, REVISION]
+        comments:
+          type: string
+        inlineNotes:
+          type: array
+          items:
+            $ref: "#/components/schemas/InlineNote"
+
+    Review:
+      type: object
+      required: [id, paperId, reviewerId, reviewerName, layer, decision, comments, createdAt]
+      properties:
+        id:
+          type: integer
+        paperId:
+          type: integer
+        reviewerId:
+          type: integer
+        reviewerName:
+          type: string
+        layer:
+          type: integer
+        decision:
+          type: string
+          enum: [APPROVED, REJECTED, REVISION]
+        comments:
+          type: string
+        inlineNotes:
+          type: array
+          items:
+            $ref: "#/components/schemas/InlineNote"
+        createdAt:
+          type: string
+          format: date-time
+
+    InlineNote:
+      type: object
+      required: [note]
+      properties:
+        page:
+          type: integer
+        position:
+          type: string
+        note:
+          type: string
+
+    # ─── StatusHistory ─────────────────────────────────────────────────────────
+    StatusHistoryEntry:
+      type: object
+      required: [id, fromStatus, toStatus, changedBy, createdAt]
+      properties:
+        id:
+          type: integer
+        fromStatus:
+          type: ["string", "null"]
+        toStatus:
+          type: string
+        changedBy:
+          type: string
+        note:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    # ─── Admin ops ─────────────────────────────────────────────────────────────
+    AssignInput:
+      type: object
+      required: [verifierId]
+      properties:
+        verifierId:
+          type: integer
+
+    StatusOverride:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [DRAFT, SUBMITTED, AI_REVIEW, AI_PASSED, AI_FAILED, LAYER_2_REVIEW, LAYER_2_APPROVED, LAYER_3_REVIEW, LAYER_3_APPROVED, PUBLISHED, REVISION_REQUESTED, REJECTED]
+        note:
+          type: string
+
+    # ─── Analytics ─────────────────────────────────────────────────────────────
+    PlatformStats:
+      type: object
+      required: [totalPublished, totalSubmitted, totalUsers, categories]
+      properties:
+        totalPublished:
+          type: integer
+        totalSubmitted:
+          type: integer
+        totalUsers:
+          type: integer
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+
+    CategoryCount:
+      type: object
+      required: [category, count]
+      properties:
+        category:
+          type: string
+        count:
+          type: integer
+
+    AnalyticsData:
+      type: object
+      required: [statusBreakdown, submissionsOverTime, avgReviewTime, acceptanceRate, totalPapers, totalUsers]
+      properties:
+        statusBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatusCount"
+        submissionsOverTime:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSeriesPoint"
+        avgReviewTime:
+          type: number
+        acceptanceRate:
+          type: number
+        totalPapers:
+          type: integer
+        totalUsers:
+          type: integer
+
+    StatusCount:
+      type: object
+      required: [status, count]
+      properties:
+        status:
+          type: string
+        count:
+          type: integer
+
+    TimeSeriesPoint:
+      type: object
+      required: [date, count]
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
