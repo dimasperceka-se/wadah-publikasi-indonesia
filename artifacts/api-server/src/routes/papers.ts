@@ -12,6 +12,7 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
 import { runAiReview } from "../lib/aiReview";
+import { consumeOneSubmission } from "../lib/billing";
 
 const router: IRouter = Router();
 
@@ -328,6 +329,15 @@ router.post("/my/papers/:id/submit", requireAuth, async (req, res): Promise<void
 
   if (!["DRAFT", "REVISION_REQUESTED"].includes(paper.status)) {
     res.status(400).json({ error: `Cannot submit paper with status: ${paper.status}` });
+    return;
+  }
+
+  const consumed = await consumeOneSubmission(req.user!.userId);
+  if (!consumed) {
+    res.status(402).json({
+      error: "No active subscription with remaining quota. Please choose a plan before submitting.",
+      code: "PAYMENT_REQUIRED",
+    });
     return;
   }
 

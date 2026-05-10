@@ -44,6 +44,15 @@ Thumbs.db
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 
-# Replit
+# Local pnpm store / cache
 .cache/
 .local/
+
+# Local env
+.env
+.env.local
+
+# Reference repos copied locally for design only — not part of the project
+attached_assets/storify-main/
+attached_assets/storify-marketing-web-main/
+

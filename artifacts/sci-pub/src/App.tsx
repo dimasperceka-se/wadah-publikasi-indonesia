@@ -4,9 +4,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import Navbar from "@/components/Navbar";
+import { FlowingRibbons } from "@/components/BackgroundDecorations";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/LoginPage";
 import HomePage from "@/pages/HomePage";
+import PricingPage from "@/pages/PricingPage";
 import PaperDetailPage from "@/pages/PaperDetailPage";
 import MyPapersPage from "@/pages/MyPapersPage";
 import SubmitPaperPage from "@/pages/SubmitPaperPage";
@@ -33,10 +35,10 @@ function ProtectedRoute({
   if (!isAuth) return <LoginPage />;
   if (roles && user && !roles.includes(user.role)) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#05101f" }}>
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-slate-300 mb-2">Access Denied</h2>
-          <p className="text-slate-500 text-sm">You don't have permission to view this page.</p>
+          <h2 className="text-xl font-semibold text-foreground mb-2">Access Denied</h2>
+          <p className="text-muted-foreground text-sm">You don't have permission to view this page.</p>
         </div>
       </div>
     );
@@ -46,11 +48,13 @@ function ProtectedRoute({
 
 function AppLayout() {
   return (
-    <div className="min-h-screen" style={{ background: "#05101f" }}>
+    <div className="min-h-screen relative bg-background text-foreground selection:bg-primary/30">
+      <FlowingRibbons />
       <Navbar />
       <Switch>
         <Route path="/" component={HomePage} />
         <Route path="/login" component={LoginPage} />
+        <Route path="/pricing" component={PricingPage} />
         <Route path="/papers/:id" component={PaperDetailPage} />
         <Route path="/my-papers">
           {() => <ProtectedRoute component={MyPapersPage} />}
