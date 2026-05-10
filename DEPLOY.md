@@ -103,7 +103,7 @@ cd scipub
 cat > .env <<'EOF'
 DATABASE_URL=postgres://scipub_app:GANTI_PASSWORD_INI@localhost:5432/scipub
 SESSION_SECRET=GANTI_DENGAN_RANDOM_64_CHAR
-PORT=5000
+PORT=15000
 NODE_ENV=production
 LOG_LEVEL=info
 ANTHROPIC_API_KEY=
@@ -121,9 +121,9 @@ openssl rand -base64 48
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm --filter @workspace/db run push    # buat tabel di DB scipub
+pnpm --filter @workspace/db run push
 pnpm --filter @workspace/api-server run build
-pnpm --filter @workspace/sci-pub run build   # output ke artifacts/sci-pub/dist/public
+pnpm --filter @workspace/sci-pub run build
 ```
 
 ### 2.6 Update flow (setiap deploy berikutnya)
@@ -144,7 +144,7 @@ sudo systemctl reload nginx
 ## 3. Deploy sebagai `scipub.storify.asia`
 
 Arsitektur runtime:
-- **API server** (Node) jalan di `127.0.0.1:5000`, dikelola oleh systemd
+- **API server** (Node) jalan di `127.0.0.1:15000`, dikelola oleh systemd
 - **Frontend** sudah di-build jadi static files di `artifacts/sci-pub/dist/public`
 - **nginx** terima request `https://scipub.storify.asia`, serve static + proxy `/api/*` ke API server
 - **TLS** dari Let's Encrypt via certbot
@@ -190,7 +190,7 @@ sudo systemctl status scipub-api --no-pager
 
 Cek log: `sudo journalctl -u scipub-api -f`.
 
-Smoke test: `curl http://127.0.0.1:5000/api/healthz` → `{"status":"ok"}`.
+Smoke test: `curl http://127.0.0.1:15000/api/healthz` → `{"status":"ok"}`.
 
 ### 3.3 nginx — virtual host
 
@@ -207,7 +207,7 @@ server {
 
     # API → backend Node
     location /api/ {
-        proxy_pass http://127.0.0.1:5000;
+        proxy_pass http://127.0.0.1:15000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -321,7 +321,7 @@ SQL
 
 | Gejala | Cek |
 |---|---|
-| `502 Bad Gateway` di browser | `sudo systemctl status scipub-api` — apakah API jalan? `curl 127.0.0.1:5000/api/healthz` |
+| `502 Bad Gateway` di browser | `sudo systemctl status scipub-api` — apakah API jalan? `curl 127.0.0.1:15000/api/healthz` |
 | `connection refused` di journalctl | DB belum jalan / `DATABASE_URL` salah; `sudo systemctl status postgresql` |
 | `password authentication failed` | Cek `.env` vs role di Postgres (`\du` di `psql`) |
 | Frontend 404 di refresh halaman dalam | nginx fallback ke `index.html` — pastikan blok `try_files $uri $uri/ /index.html;` ada |
